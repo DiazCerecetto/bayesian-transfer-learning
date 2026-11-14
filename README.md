@@ -41,7 +41,7 @@ Requisitos: R base (Actions usa R 4.5.3), XeLaTeX, latexmk y los paquetes de
 LaTeX del preámbulo. En Ubuntu se instalan con:
 
 ```bash
-sudo apt-get install latexmk texlive-xetex texlive-lang-spanish texlive-latex-extra lmodern
+sudo apt-get install latexmk texlive-xetex texlive-lang-spanish texlive-latex-extra texlive-fonts-recommended lmodern
 ```
 
 Desde la raíz del repositorio:
