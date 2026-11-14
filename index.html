@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bayesian Transfer Learning · Power prior</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f6f8; --surface:#fff; --text:#182331; --muted:#5d6977; --border:#dde2e8; --grid:#e9edf2; --blue:#2468cb; --orange:#b87524; --target:#7a8795; font-family:Inter,"Segoe UI",system-ui,sans-serif; }
+    @media(prefers-color-scheme:dark) { :root { --bg:#141a22; --surface:#1c2530; --text:#e9eef6; --muted:#a7b3c2; --border:#34404e; --grid:#2b3644; --blue:#77aeff; --orange:#e5b368; --target:#a6b2c2; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    main { max-width:1240px; margin:auto; padding:clamp(20px,4vw,48px); }
+    h1,h2,p { margin:0; }
+    h1 { font-size:25px; font-weight:600; letter-spacing:-.6px; }
+    .subtitle { color:var(--muted); font-size:14px; margin-top:8px; }
+    .downloads { display:flex; flex-wrap:wrap; gap:12px 22px; margin-top:20px; font-size:14px; }
+    a { color:var(--blue); text-underline-offset:3px; }
+    a:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
+    .note { color:var(--muted); font-size:13px; line-height:1.6; margin-top:24px; max-width:900px; }
+    .controls { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin:32px 0; }
+    .control { min-width:0; }
+    .control-label { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+    .control-label label { font-size:15px; }
+    .control-label output { font-size:28px; font-weight:600; letter-spacing:-.7px; }
+    output,.ticks { font-variant-numeric:tabular-nums; }
+    input[type="range"] { --progress:50%; width:100%; height:44px; margin:8px 0 0; background:transparent; appearance:none; -webkit-appearance:none; cursor:ew-resize; accent-color:var(--blue); }
+    input[type="range"]::-webkit-slider-runnable-track { height:6px; border-radius:8px; background:linear-gradient(to right,var(--blue) var(--progress),var(--border) var(--progress)); }
+    input[type="range"]::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:23px; height:23px; margin-top:-8.5px; border-radius:50%; background:var(--blue); border:3px solid var(--surface); box-shadow:0 0 0 1px var(--blue); }
+    input[type="range"]::-moz-range-track { height:6px; border-radius:8px; background:var(--border); }
+    input[type="range"]::-moz-range-progress { height:6px; border-radius:8px; background:var(--blue); }
+    input[type="range"]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--blue); border:3px solid var(--surface); box-shadow:0 0 0 1px var(--blue); }
+    input:focus-visible { outline:3px solid var(--blue); outline-offset:5px; }
+    .ticks { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; padding:0 5px; }
+    .panels { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px; }
+    .panel { min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 20px 18px; }
+    h2 { font-size:18px; font-weight:600; letter-spacing:-.3px; }
+    .legend { display:flex; gap:18px; flex-wrap:wrap; min-height:46px; align-items:center; font-size:12px; }
+    .legend span { display:inline-flex; align-items:center; gap:7px; }
+    .swatch { width:24px; border-top:2px solid var(--blue); }
+    .swatch.target { border-color:var(--target); border-top-style:dashed; }
+    .swatch.source { border-color:var(--orange); border-top-style:dotted; border-top-width:3px; }
+    svg { display:block; width:100%; height:330px; overflow:visible; }
+    svg text { fill:var(--muted); font:11px "Segoe UI",system-ui,sans-serif; }
+    .grid { stroke:var(--grid); stroke-width:1; }
+    .axis { stroke:var(--border); stroke-width:1; }
+    .curve { fill:none; stroke-linejoin:round; stroke-linecap:round; transition:d 140ms ease; }
+    .curve.target { stroke:var(--target); stroke-width:1.8; stroke-dasharray:5 5; }
+    .curve.source { stroke:var(--orange); stroke-width:1.8; stroke-dasharray:1 5; }
+    .curve.posterior,.curve.optimal { stroke:var(--blue); stroke-width:2.6; }
+    .interval { fill:var(--blue); fill-opacity:.15; transition:d 140ms ease; }
+    .mean-dot,.selected { fill:var(--blue); }
+    .guide { stroke:var(--muted); stroke-width:1; stroke-dasharray:3 4; }
+    .metrics { border-top:1px solid var(--border); padding-top:16px; margin-top:12px; display:flex; justify-content:space-between; gap:10px; }
+    .metric { display:flex; flex-direction:column; gap:5px; }
+    .metric:last-child { text-align:right; }
+    .metric:only-child { text-align:left; }
+    .metric-label { color:var(--muted); font-size:12px; }
+    .metric-value { font-size:18px; font-weight:500; white-space:nowrap; }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    @media(max-width:850px) { main { padding:24px 18px; } .panels { grid-template-columns:1fr; } svg { height:300px; } }
+    @media(max-width:500px) { .controls { grid-template-columns:1fr; gap:24px; margin:28px 0; } .panel { padding:20px 12px 16px; } main { padding:20px 12px; } }
+    @media(prefers-reduced-motion:reduce) { .curve,.interval { transition:none; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Fuente variable</h1>
+  <p class="subtitle">T: 6/20 · n<sub>S</sub> = 100 · Beta(1,1)</p>
+  <nav class="downloads" aria-label="Materiales del trabajo">
+    <a href="informe.pdf">Leer informe en PDF</a>
+    <a href="analisis.R" download>Descargar código R</a>
+    <a href="resultados/sensibilidad-fuente.csv" download>Descargar resultados CSV</a>
+    <a href="https://github.com/DiazCerecetto/bayesian-transfer-learning">Repositorio y fuentes</a>
+  </nav>
+  <noscript><p class="note">Activá JavaScript para explorar las distribuciones. El informe y los resultados se pueden descargar con los enlaces de arriba.</p></noscript>
+  <div class="controls">
+    <div class="control">
+      <div class="control-label"><label for="variable-source">Fuente S</label><output id="source-count" for="variable-source">31/100</output></div>
+      <input type="range" id="variable-source" min="6" max="60" step="1" value="31" aria-label="Éxitos en S. Al mover la barra se aplica el phi que minimiza el DIC por grilla y Monte Carlo.">
+      <div class="ticks" aria-hidden="true"><span>6 %</span><span>60 %</span></div>
+    </div>
+    <div class="control">
+      <div class="control-label"><label for="phi">Peso aplicado · φ</label><output id="phi-value" for="phi">1,0</output></div>
+      <input type="range" id="phi" min="0" max="1" step="0.1" value="1" aria-valuetext="1,0">
+      <div class="ticks" aria-hidden="true"><span>0</span><span>0,1</span><span>0,2</span><span>0,3</span><span>0,4</span><span>0,5</span><span>0,6</span><span>0,7</span><span>0,8</span><span>0,9</span><span>1</span></div>
+    </div>
+  </div>
+  <div class="panels">
+    <section class="panel">
+      <h2>Posterior de θ</h2>
+      <div class="legend"><span><i class="swatch target" aria-hidden="true"></i>Solo T</span><span><i class="swatch source" aria-hidden="true"></i>Solo S</span><span><i class="swatch" aria-hidden="true"></i>Con φ</span></div>
+      <svg id="density-chart" role="img" aria-label="Distribuciones Beta para la fuente elegida, el objetivo fijo y su posterior ponderada"></svg>
+      <div class="metrics"><div class="metric"><span class="metric-label">Media</span><output id="mean-current" class="metric-value"></output></div><div class="metric"><span class="metric-label">IC 95 %</span><output id="ci-current" class="metric-value"></output></div></div>
+    </section>
+    <section class="panel">
+      <h2>Peso elegido según S</h2>
+      <div class="legend"><span><i class="swatch" aria-hidden="true"></i>Grilla / Monte Carlo</span></div>
+      <svg id="optimum-chart" role="img" aria-label="Peso óptimo de transferencia según la proporción de éxitos de S, con T igual a 6 de 20"></svg>
+      <div class="metrics"><div class="metric"><span class="metric-label">φ* elegido</span><output id="optimum-mc" class="metric-value"></output></div></div>
+    </section>
+  </div>
+  <p class="note">Ejemplo didáctico con conteos fijados. Al mover S se aplica el peso que minimiza el DIC sobre los datos de T; la barra de φ permite probar otros pesos. La selección usa una grilla de 99 valores de θ, 10 000 muestras y semilla 84735. Las curvas y los intervalos creíbles se calculan con la posterior Beta exacta condicionada al peso aplicado; no incluyen la incertidumbre de elegir φ.</p>
+  <p class="note">Florencia Cosentino y Miguelángel Díaz · Inferencia II, 2026. Basado en la sección 6 de <a href="https://doi.org/10.1098/rsta.2022.0156">Being Bayesian in the 2020s</a>.</p>
+  <p id="announcement" class="sr-only" aria-live="polite"></p>
+</main>
+<!-- Un experimento: T=6/20, n_S=100, previa Beta(1,1).
+     La fuente cambia de a un exito; las curvas son posteriores Beta.
+     El sombreado cubre el intervalo creible central del 95%.
+     sensitivity contiene [y_S, phi_MC], regenerados por analisis.R. -->
+<script id="beta-math">
+const Beta = (() => {
+  // Aproximación de Lanczos y fracción continua para la beta incompleta regularizada.
+  function logGamma(z) {
+    const c = [676.5203681218851, -1259.1392167224028, 771.3234287776531,
+      -176.6150291621406, 12.507343278686905, -.13857109526572012,
+      9.984369578019572e-6, 1.5056327351493116e-7];
+    if (z < .5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI*z)) - logGamma(1-z);
+    z -= 1;
+    let sum = .9999999999998099;
+    for (let i=0; i<c.length; i++) sum += c[i]/(z+i+1);
+    const t = z + 7.5;
+    return .5*Math.log(2*Math.PI) + (z+.5)*Math.log(t) - t + Math.log(sum);
+  }
+  function logB(a,b) { return logGamma(a)+logGamma(b)-logGamma(a+b); }
+  function density(a,b) {
+    const normalizer = logB(a,b);
+    return x => {
+      if (x<=0) return a===1 ? b : 0;
+      if (x>=1) return b===1 ? a : 0;
+      return Math.exp((a-1)*Math.log(x)+(b-1)*Math.log1p(-x)-normalizer);
+    };
+  }
+  function fraction(a,b,x) {
+    const tiny = 1e-300;
+    let c=1, d=1-(a+b)*x/(a+1);
+    if (Math.abs(d)<tiny) d=tiny;
+    d=1/d;
+    let h=d;
+    for (let m=1; m<=300; m++) {
+      const m2=2*m;
+      let aa=m*(b-m)*x/((a+m2-1)*(a+m2));
+      d=1+aa*d; if (Math.abs(d)<tiny) d=tiny;
+      c=1+aa/c; if (Math.abs(c)<tiny) c=tiny;
+      d=1/d; h*=d*c;
+      aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+m2+1));
+      d=1+aa*d; if (Math.abs(d)<tiny) d=tiny;
+      c=1+aa/c; if (Math.abs(c)<tiny) c=tiny;
+      d=1/d;
+      const delta=d*c;
+      h*=delta;
+      if (Math.abs(delta-1)<3e-14) return h;
+    }
+    throw new Error('La función beta no convergió.');
+  }
+  function cdf(x,a,b) {
+    if (x<=0) return 0;
+    if (x>=1) return 1;
+    const front=Math.exp(a*Math.log(x)+b*Math.log1p(-x)-logB(a,b));
+    const result=x<(a+1)/(a+b+2)
+      ? front*fraction(a,b,x)/a : 1-front*fraction(b,a,1-x)/b;
+    return Math.max(0,Math.min(1,result));
+  }
+  function quantile(p,a,b) {
+    if (p<=0) return 0;
+    if (p>=1) return 1;
+    let lo=0, hi=1;
+    for (let i=0; i<45; i++) {
+      const mid=(lo+hi)/2;
+      if (cdf(mid,a,b)<p) lo=mid; else hi=mid;
+    }
+    return (lo+hi)/2;
+  }
+  return {density,cdf,quantile};
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+  /* SENSITIVITY_START */
+  const sensitivity = [[6,0.0],[7,0.1],[8,0.1],[9,0.1],[10,0.1],[11,0.1],[12,0.1],[13,0.1],[14,0.1],[15,0.1],[16,0.1],[17,0.2],[18,0.3],[19,0.3],[20,0.6],[21,0.8],[22,1.0],[23,1.0],[24,1.0],[25,1.0],[26,1.0],[27,1.0],[28,1.0],[29,1.0],[30,1.0],[31,1.0],[32,1.0],[33,1.0],[34,1.0],[35,1.0],[36,1.0],[37,1.0],[38,1.0],[39,1.0],[40,1.0],[41,1.0],[42,0.6],[43,0.4],[44,0.3],[45,0.2],[46,0.1],[47,0.1],[48,0.1],[49,0.1],[50,0.1],[51,0.1],[52,0.1],[53,0.1],[54,0.0],[55,0.0],[56,0.0],[57,0.0],[58,0.0],[59,0.0],[60,0.0]];
+  /* SENSITIVITY_END */
+  const lookup=new Map(sensitivity.map(row=>[row[0],{mc:row[1]}]));
+  const source=document.getElementById('variable-source'), phi=document.getElementById('phi');
+  source.min=String(sensitivity[0][0]);source.max=String(sensitivity.at(-1)[0]);
+  const densitySvg=document.getElementById('density-chart'), optimumSvg=document.getElementById('optimum-chart');
+  const ns='http://www.w3.org/2000/svg';
+  const format=(x,n=3)=>x.toLocaleString('es-UY',{minimumFractionDigits:n,maximumFractionDigits:n});
+  function node(tag,attrs={},text) { const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el; }
+  function series(a,b) { const pdf=Beta.density(a,b);return {pdf,points:Array.from({length:801},(_,i)=>[i/800,pdf(i/800)])}; }
+  const target=series(7,15);
+  let maximum=0;
+  for(const [s] of sensitivity) {
+    for(let i=0;i<=10;i++) {
+      const a=7+i/10*s,b=15+i/10*(100-s);
+      maximum=Math.max(maximum,Beta.density(a,b)((a-1)/(a+b-2)));
+    }
+    maximum=Math.max(maximum,Beta.density(1+s,101-s)(s/100));
+  }
+  const ceiling=Math.ceil(maximum/5)*5;
+  function axes(svg,xmin,xmax,ymax,xticks,yticks,xlabel,ylabel) {
+    const {width,height}=svg.getBoundingClientRect();
+    if(!width)return null;
+    if(svg.chart&&svg.chart.width===width&&svg.chart.height===height)return svg.chart;
+    svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    const left=34,right=width-12,top=24,bottom=height-36;
+    const x=v=>left+(v-xmin)/(xmax-xmin)*(right-left),y=v=>bottom-v/ymax*(bottom-top);
+    svg.append(node('desc',{},svg.getAttribute('aria-label')));
+    svg.append(node('text',{x:left,y:12},ylabel));
+    for(const tick of yticks) {
+      svg.append(node('line',{x1:left,x2:right,y1:y(tick),y2:y(tick),class:'grid'}));
+      svg.append(node('text',{x:left-8,y:y(tick)+4,'text-anchor':'end'},tick.toLocaleString('es-UY')));
+    }
+    for(const tick of xticks) {
+      svg.append(node('line',{x1:x(tick),x2:x(tick),y1:bottom,y2:bottom+4,class:'axis'}));
+      svg.append(node('text',{x:x(tick),y:bottom+18,'text-anchor':'middle'},tick.toLocaleString('es-UY')));
+    }
+    svg.append(node('text',{x:(left+right)/2,y:height-1,'text-anchor':'middle'},xlabel));
+    const marks=node('g');svg.append(marks);
+    svg.chart={width,height,left,right,top,bottom,x,y,marks,nodes:{}};
+    return svg.chart;
+  }
+  let state;
+  function drawDensity() {
+    if(!state)return;
+    const c=axes(densitySvg,0,1,ceiling,[0,.2,.4,.6,.8,1],Array.from({length:ceiling/5+1},(_,i)=>i*5),'θ','Densidad');
+    if(!c)return;
+    const line=points=>points.map(([a,b],i)=>`${i?'L':'M'}${c.x(a).toFixed(2)},${c.y(b).toFixed(2)}`).join(' ');
+    if(!c.nodes.post) {
+      c.nodes={shade:node('path',{class:'interval'}),target:node('path',{class:'curve target'}),source:node('path',{class:'curve source'}),post:node('path',{class:'curve posterior'}),dot:node('circle',{class:'mean-dot',r:3.5,cy:c.bottom})};
+      c.marks.append(...Object.values(c.nodes));
+    }
+    c.nodes.target.setAttribute('d',line(target.points));c.nodes.source.setAttribute('d',line(state.source.points));c.nodes.post.setAttribute('d',line(state.posterior.points));
+    const band=Array.from({length:241},(_,i)=>{const t=state.lo+(state.hi-state.lo)*i/240;return [t,state.posterior.pdf(t)];});
+    c.nodes.shade.setAttribute('d',`M${c.x(state.lo)},${c.bottom} ${line(band).replace(/^M/,'L')} L${c.x(state.hi)},${c.bottom} Z`);
+    c.nodes.dot.setAttribute('cx',c.x(state.mean));
+  }
+  function drawOptimum() {
+    if(!state)return;
+    const c=axes(optimumSvg,Number(source.min),Number(source.max),1.05,[6,10,20,30,40,50,60],[0,.2,.4,.6,.8,1],'S (%)','φ*');
+    if(!c)return;
+    if(!c.nodes.selected) {
+      let d=`M${c.x(sensitivity[0][0])},${c.y(sensitivity[0][1])}`;
+      for(const row of sensitivity.slice(1))d+=` H${c.x(row[0])} V${c.y(row[1])}`;
+      c.marks.append(node('path',{d,class:'curve optimal'}));
+      c.nodes.guide=node('line',{y1:c.top,y2:c.bottom,class:'guide'});
+      c.nodes.selected=node('circle',{r:5,class:'selected'});
+      c.marks.append(c.nodes.guide,c.nodes.selected);
+    }
+    c.nodes.guide.setAttribute('x1',c.x(state.s));c.nodes.guide.setAttribute('x2',c.x(state.s));
+    c.nodes.selected.setAttribute('cx',c.x(state.s));c.nodes.selected.setAttribute('cy',c.y(state.best.mc));
+  }
+  function update(announce=false) {
+    const s=Number(source.value),p=Number(phi.value),best=lookup.get(s);
+    const a=7+p*s,b=15+p*(100-s);
+    state={s,p,best,source:series(1+s,101-s),posterior:series(a,b),mean:a/(a+b),lo:Beta.quantile(.025,a,b),hi:Beta.quantile(.975,a,b)};
+    document.getElementById('source-count').value=`${s}/100`;
+    document.getElementById('phi-value').value=format(p,1);
+    document.getElementById('mean-current').value=format(state.mean);
+    document.getElementById('ci-current').value=`${format(state.lo)} – ${format(state.hi)}`;
+    document.getElementById('optimum-mc').value=format(best.mc,1);
+    source.style.setProperty('--progress',`${(s-Number(source.min))/(Number(source.max)-Number(source.min))*100}%`);
+    phi.style.setProperty('--progress',`${p*100}%`);
+    source.setAttribute('aria-valuetext',`${s} éxitos en 100 ensayos. Phi elegido por DIC de grilla y Monte Carlo ${format(best.mc,1)}.`);
+    phi.setAttribute('aria-valuetext',format(p,1));
+    densitySvg.setAttribute('aria-label',`S ${s}/100 y T 6/20. Phi aplicado ${format(p,1)}. Media ${format(state.mean)}. Intervalo creíble del 95 por ciento de ${format(state.lo)} a ${format(state.hi)}.`);
+    optimumSvg.setAttribute('aria-label',`Peso elegido según S. Para S ${s} por ciento, phi por grilla y Monte Carlo ${format(best.mc,1)}.`);
+    drawDensity();drawOptimum();
+    if(announce)document.getElementById('announcement').textContent=densitySvg.getAttribute('aria-label')+' '+optimumSvg.getAttribute('aria-label');
+  }
+  source.addEventListener('input',()=>{phi.value=String(lookup.get(Number(source.value)).mc);update();});
+  source.addEventListener('change',()=>update(true));
+  phi.addEventListener('input',()=>update());phi.addEventListener('change',()=>update(true));
+  const observer=new ResizeObserver(()=>{drawDensity();drawOptimum();});
+  observer.observe(densitySvg);observer.observe(optimumSvg);
+  update();
+})();
+</script>
+</body>
+</html>

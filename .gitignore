@@ -48,3 +48,25 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Compilacion de LaTeX, respaldos locales y sitio preparado por Actions
+/build/
+/_site/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.xdv
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+
+# Archivos del sistema y del editor
+.DS_Store
+Thumbs.db
+*.swp
