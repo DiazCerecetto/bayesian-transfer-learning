@@ -9,23 +9,21 @@ basado en la sección 6 de [Bon et al. (2023), *Being Bayesian in the 2020s*](ht
 - [Explorador interactivo](https://diazcerecetto.github.io/bayesian-transfer-learning/): variar la fuente S y el peso φ.
 - [Informe PDF publicado](https://diazcerecetto.github.io/bayesian-transfer-learning/informe.pdf).
 - [Copia del PDF en el repositorio](informe.pdf).
-- [Código R](analisis.R) y [resultados CSV](resultados/sensibilidad-fuente.csv).
+- [Código R](analisis.R) y [salida numérica](resultados/salida-power-prior.txt).
 
 ## Archivos del repositorio
 
 ```text
-analisis.R                              # Único script: modelo y generación de salidas
+analisis.R                              # Único script: cálculo, salida y figura
 informe/
   informe.tex                           # Fuente del informe
 figuras/
   sensibilidad-fuente.png                # Figura incluida en el informe
 resultados/
-  sensibilidad-fuente.csv                # Barrido completo, medias e intervalos
-  tabla-sensibilidad-fuente.tex           # Tabla generada e incluida por el informe
-  salida-power-prior.txt                 # Resultados numéricos incluidos en el anexo
+  salida-power-prior.txt                 # φ elegido y DIC mínimo para cada fuente (anexo)
 informe.pdf                             # Copia final para descargar
 index.html                              # Explorador autónomo, con CSS y JS incluidos
-.github/workflows/publicar.yml           # Compilación y publicación en GitHub Pages
+.github/workflows/publicar.yml           # Publicación en GitHub Pages
 .gitignore                              # Excluye auxiliares, respaldos y archivos temporales
 ```
 
@@ -37,7 +35,7 @@ que `build/` y `_site/`. La tipografía usa Latin Modern, incluida en TeX Live.
 
 ## Reproducir
 
-Requisitos: R base (Actions usa R 4.5.3), XeLaTeX, latexmk y los paquetes de
+Requisitos: R base, XeLaTeX, latexmk y los paquetes de
 LaTeX del preámbulo. En Ubuntu se instalan con:
 
 ```bash
@@ -51,21 +49,20 @@ Rscript analisis.R
 latexmk -xelatex -interaction=nonstopmode -halt-on-error -outdir=build informe/informe.tex
 ```
 
-El primer comando regenera el CSV, la salida numérica, la tabla y la figura, y
-actualiza en `index.html` los pesos elegidos. El segundo genera
+El primer comando regenera la salida numérica y la figura. El segundo genera
 `build/informe.pdf`; copiar ese archivo a `informe.pdf` antes de subir cambios en
 la entrega (`cp build/informe.pdf informe.pdf` en Bash, o
 `Copy-Item build/informe.pdf informe.pdf` en PowerShell).
 
-El script también puede ejecutarse indicando su ruta desde otra carpeta. Al
-cargarlo con `source("analisis.R")` solo se definen las funciones; se pueden
-usar `perfil_fuente()`, `barrer_fuente()` o `generar_entrega()` por separado.
-El explorador se abre localmente con `index.html`, sin servidor ni paquetes.
+La tabla del informe y los pesos del explorador (`sensitivity` en `index.html`)
+están escritos a mano a partir de `resultados/salida-power-prior.txt`; si se
+cambia el experimento, hay que actualizarlos. El explorador se abre localmente
+con `index.html`, sin servidor ni paquetes.
 
 ## Experimento y lectura de resultados
 
-Se fija T = 6/20, n_S = 100 y previa Beta(1,1). El barrido parte de y_S = 30,
-sigue 31, 29, 32, 28, …, y abarca los 55 valores de 6 a 60.
+Se fija T = 6/20, n_S = 100 y previa Beta(1,1). El barrido abarca los 55
+valores de y_S entre 6 y 60.
 Para cada fuente se prueban φ = 0, 0.1, …, 1. La posterior se aproxima con
 99 valores de θ entre 0.01 y 0.99 y 10 000 muestras, con semilla 84735.
 El DIC usa exclusivamente la verosimilitud del objetivo T.
@@ -80,14 +77,12 @@ ruido de Monte Carlo; no son umbrales generales de transferencia.
 
 ## Publicación automática
 
-El workflow [Compilar y publicar informe](.github/workflows/publicar.yml) se
+El workflow [Publicar en GitHub Pages](.github/workflows/publicar.yml) se
 ejecuta con cada push a `main` y también se puede iniciar desde **Actions → Run
-workflow**. Regenera las salidas con R, compila el PDF desde el `.tex` y publica
-el explorador, el PDF recién compilado, el código R y el CSV en GitHub Pages.
-Las pull requests ejecutan la compilación para validar los cambios.
+workflow**. No usa R ni LaTeX: publica tal cual los archivos versionados
+`index.html`, `informe.pdf` y `analisis.R`. Por eso, antes de subir cambios en
+el informe hay que compilarlo localmente y copiar el PDF a `informe.pdf`.
 
 En **Settings → Pages → Build and deployment**, la fuente debe ser **GitHub
 Actions**. La publicación utiliza el `GITHUB_TOKEN` automático y el entorno
 `github-pages`, siguiendo el [workflow de GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-El PDF público se recompila en cada ejecución; la copia versionada se actualiza
-al preparar una nueva entrega.

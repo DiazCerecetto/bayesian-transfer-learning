@@ -10,7 +10,6 @@
 \setlength{\belowdisplayskip}{5pt}
 
 \definecolor{azul}{HTML}{245B91}
-\definecolor{celeste}{HTML}{EFF6FC}
 
 \pagestyle{plain}
 
@@ -18,7 +17,7 @@
   colorlinks=true,
   linkcolor=azul,
   urlcolor=azul,
-  pdftitle={Trabajo Final: Being Bayesian in the 2020s}
+  pdftitle={Trabajo Final}
 }
 \setcounter{tocdepth}{1}
 \setcounter{secnumdepth}{0}
@@ -30,11 +29,6 @@
 \newcommand{\Var}{\operatorname{Var}}
 \newcommand{\DIC}{\operatorname{DIC}}
 
-\newcommand{\letra}[1]{%
-  \par\begingroup\setlength{\fboxsep}{8pt}%
-  \fcolorbox{azul}{celeste}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\color{azul}#1}}%
-  \endgroup\par\medskip
-}
 \newcommand{\inciso}[1]{\par\smallskip\textbf{#1}\quad}
 \newcommand{\etapa}[1]{\par\smallskip\textbf{#1.}\quad}
 
@@ -84,14 +78,15 @@ Nosotros elegimos trabajar más a detalle la Sección 6, en la que se aborda la 
 
 \section{2. Resultado central}\label{sec:resultado}
 
-\letra{
+\begin{quote}
 ``This flattening is done by choosing a value $\phi\in[0,1]$ and raising the source likelihood to the value of $\phi$ which gives
 \[
 \pi(\theta\mid\phi,y_T,y_S)\propto f_T(y_T\mid\theta)f_S(y_S\mid\theta)^{\phi}\pi(\theta),
 \]
-where $f_S(y_S\mid\theta)$ and $f_T(y_T\mid\theta)$ are the source and target likelihood functions, respectively.''}
+where $f_S(y_S\mid\theta)$ and $f_T(y_T\mid\theta)$ are the source and target likelihood functions, respectively.''
+\end{quote}
 
-{\small\textit{Fuente:} Bon \emph{et al.} (2023), sección 6, p.~16. Se utiliza un conjunto de datos de una fuente similar con una cantidad mayor de ejemplos, en conjunto con la verosimilitud de los datos del dominio objetivo y su previa. Se toma la verosimilitud del dominio fuente y se incorpora a la ecuación elevada a un hiperparámetro $\phi$ que se optimiza.}
+{\small Bon \emph{et al.} (2023), sección 6, p.~16.}
 
 Cuando $\phi = 0$, $[f_S(y_S\mid\theta)]^0 = 1$, y la posterior depende solo de los datos de $T$ y de la previa. La inferencia descarta por completo los datos de la fuente. Si $\phi = 1$, se utiliza verosimilitud fuente con el mismo peso que la del objetivo, como si fuese posible ampliar los datos de $T$ incorporando las de $S$. Luego, para valores intermedios $0 < \phi < 1$, si se considera la log-verosimilitud fuente, esta queda multiplicada por $\phi$ y se pondera la influencia de $S$.
 
@@ -170,7 +165,29 @@ En el Práctico 2 vimos aproximación por grilla y Monte Carlo. En nuestro ejemp
 
 Fijamos $T$ con $6$ éxitos de $20$ ensayos ($30\%$) y $S$ de $100$ observaciones. Usamos una previa $\theta\sim\BetaDist(1,1)$ y variamos el número de éxitos de $S$. Una vez elegimos un $S$ nuevo, probamos valores de $\phi$ entre $0$ y $1$, con paso $0.1$ y aproximamos como vimos en el Práctico 2. Con esas muestras calculamos el $\DIC$ y elegimos el menor. Cuando la fuente está cerca del $30\%$, el criterio permite incorporarla completa. Con $S=28\%$, $29\%$, $31\%$ o $32\%$, el criterio elige $\phi=1$. Al aumentar la diferencia aparecen pesos intermedios, por ejemplo, con $S=18\%$ o $44\%$, se elige $\phi=0.3$. El Cuadro~\ref{tab:sensibilidad} muestra algunos valores.
 
-\input{resultados/tabla-sensibilidad-fuente.tex}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}cc@{}}
+\toprule
+\textbf{Fuente (\%)} & $\phi^*$ \\
+\midrule
+6 & 0.0 \\
+7 & 0.1 \\
+18 & 0.3 \\
+28 & 1.0 \\
+29 & 1.0 \\
+30 & 1.0 \\
+31 & 1.0 \\
+32 & 1.0 \\
+44 & 0.3 \\
+54 & 0.0 \\
+60 & 0.0 \\
+\bottomrule
+\end{tabular}
+\caption{Peso elegido por grilla y Monte Carlo para algunos valores del barrido.}
+\label{tab:sensibilidad}
+\end{table}
 
 Los primeros ceros aparecen en $6\%$ y $54\%$, respectivamente.
 
@@ -206,7 +223,7 @@ Le pedimos simplificar la transferencia entre dominios y la elección de $\phi$.
 \etapa{Parte c: ejemplo en R}
 También usamos la IA para generar y ajustar el ejemplo Beta--Binomial en R base. Le indicamos que consultara la consigna, el artículo, los prácticos, los talleres y las diapositivas del repositorio local. En particular, el Práctico 2 sirvió de referencia para la aproximación por grilla y Monte Carlo. Las instrucciones se precisaron mediante intercambios y correcciones para mantener la coherencia entre código, resultados y explicación.
 
-El script único \path{analisis.R} reúne el cálculo y la generación de la tabla, la figura, la salida numérica y los pesos del explorador HTML. El anexo incluye el código y los extractos de la interacción. El ejemplo permite estudiar cómo cambia la selección de $\phi$; no constituye una validación del método con datos reales.
+El script \path{analisis.R} calcula el $\DIC$ para cada fuente y cada peso, y genera la figura y la salida numérica. El anexo incluye el código y los extractos de la interacción. El ejemplo permite estudiar cómo cambia la selección de $\phi$; no constituye una validación del método con datos reales.
 
 \clearpage
 \section{Anexo}\label{sec:anexo}
