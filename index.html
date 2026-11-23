@@ -17,7 +17,9 @@
     .math sub,.math sup { font-size:.72em; line-height:0; }
     .note { color:var(--muted); font-size:13px; line-height:1.6; margin-top:24px; max-width:900px; }
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin:0 0 32px; }
+    .controls[hidden] { display:none; }
     .control { min-width:0; }
+    .panel > .control { margin-top:4px; }
     .control-label { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
     .control-label label { font-size:22px; }
     .control-label output { font-size:28px; font-weight:600; letter-spacing:-.7px; }
@@ -53,8 +55,9 @@
     .selected { fill:var(--blue); }
     .guide { stroke:var(--muted); stroke-width:1; stroke-dasharray:3 4; }
     .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-    @media(max-width:850px) { main { padding:24px 18px; } .panels { grid-template-columns:1fr; } .chart { min-height:300px; } }
-    @media(max-width:500px) { .controls { grid-template-columns:1fr; gap:24px; margin:0 0 28px; } .panel { padding:20px 12px 12px; } main { padding:20px 16px; } h2 { font-size:17px; } .legend .math { font-size:14px; } }
+    @media(pointer:coarse) { input[type="range"]::-webkit-slider-thumb { width:28px; height:28px; margin-top:-11px; } input[type="range"]::-moz-range-thumb { width:22px; height:22px; } }
+    @media(max-width:850px) { main { padding:24px 18px; } .panels { grid-template-columns:1fr; gap:12px; } .chart { min-height:clamp(170px,27vh,300px); min-height:clamp(170px,27svh,300px); } .control-label output { font-size:24px; } }
+    @media(max-width:500px) { .controls { grid-template-columns:1fr; gap:24px; margin:0 0 28px; } .panel { padding:16px 12px 12px; } main { padding:20px 16px; } h2 { font-size:17px; } .legend .math { font-size:14px; } }
     @media(prefers-reduced-motion:reduce) { .curve { transition:none; } }
   </style>
 </head>
@@ -62,18 +65,18 @@
 <main>
   <noscript><p class="note">Activá JavaScript para explorar las distribuciones.</p></noscript>
   <div class="controls">
-    <div class="control">
+    <div class="control" id="source-control">
       <div class="control-label"><label for="variable-source" class="math">S</label><output id="source-count" for="variable-source">31/100</output></div>
       <input type="range" id="variable-source" min="6" max="60" step="1" value="31" aria-label="Éxitos en S. Al mover la barra se aplica el phi que minimiza el DIC.">
     </div>
-    <div class="control">
+    <div class="control" id="phi-control">
       <div class="control-label"><label for="phi" class="math"><i>φ</i></label><output id="phi-value" for="phi">1,0</output></div>
       <input type="range" id="phi" min="0" max="1" step="0.1" value="1" aria-valuetext="1,0">
       <div class="ticks" aria-hidden="true"><span>0</span><span>0,1</span><span>0,2</span><span>0,3</span><span>0,4</span><span>0,5</span><span>0,6</span><span>0,7</span><span>0,8</span><span>0,9</span><span>1</span></div>
     </div>
   </div>
   <div class="panels">
-    <section class="panel">
+    <section class="panel" id="density-panel">
       <h2 class="math" aria-label="Posterior de theta: pi de theta dado phi, y T, y S, proporcional a f T de y T dado theta, por f S de y S dado theta elevado a phi, por pi de theta"><span class="nw"><i>π</i>(<i>θ</i>&#x2005;|&#x2005;<i>φ</i>, <i>y</i><sub>T</sub>, <i>y</i><sub>S</sub>)</span> <span class="nw">∝ <i>f</i><sub>T</sub>(<i>y</i><sub>T</sub>&#x2005;|&#x2005;<i>θ</i>)&thinsp;<i>f</i><sub>S</sub>(<i>y</i><sub>S</sub>&#x2005;|&#x2005;<i>θ</i>)<sup><i>φ</i></sup>&thinsp;<i>π</i>(<i>θ</i>)</span></h2>
       <div class="legend">
         <span><i class="swatch target" aria-hidden="true"></i><span class="math"><i>π</i>(<i>θ</i>&#x2005;|&#x2005;<i>y</i><sub>T</sub>) ∝ <i>f</i><sub>T</sub>(<i>y</i><sub>T</sub>&#x2005;|&#x2005;<i>θ</i>)&thinsp;<i>π</i>(<i>θ</i>)</span></span>
@@ -82,7 +85,7 @@
       </div>
       <div class="chart"><svg id="density-chart" role="img" aria-label="Distribuciones Beta para la fuente elegida, el objetivo fijo y su posterior ponderada"></svg></div>
     </section>
-    <section class="panel">
+    <section class="panel" id="optimum-panel">
       <h2 class="math" aria-label="Phi en función de S"><i>φ</i>(S)</h2>
       <div class="chart"><svg id="optimum-chart" role="img" aria-label="Peso óptimo de transferencia según la proporción de éxitos de S, con T igual a 6 de 20"></svg></div>
     </section>
@@ -127,7 +130,20 @@ const Beta = (() => {
   /* SENSITIVITY_END */
   const lookup=new Map(sensitivity.map(row=>[row[0],{mc:row[1]}]));
   const source=document.getElementById('variable-source'), phi=document.getElementById('phi');
-  source.min=String(sensitivity[0][0]);source.max=String(sensitivity.at(-1)[0]);
+  source.min=String(sensitivity[0][0]);source.max=String(sensitivity[sensitivity.length-1][0]);
+  // En pantallas angostas cada barra va debajo de su gráfica: S con φ(S) arriba
+  // y φ con la posterior abajo, que así queda junto a las dos barras.
+  const controls=document.querySelector('.controls'), panels=document.querySelector('.panels');
+  const densityPanel=document.getElementById('density-panel'), optimumPanel=document.getElementById('optimum-panel');
+  const sourceControl=document.getElementById('source-control'), phiControl=document.getElementById('phi-control');
+  const narrow=matchMedia('(max-width:850px)');
+  function placeControls() {
+    if(narrow.matches) { panels.prepend(optimumPanel);optimumPanel.append(sourceControl);densityPanel.append(phiControl); }
+    else { panels.append(optimumPanel);controls.append(sourceControl,phiControl); }
+    controls.hidden=narrow.matches;
+  }
+  narrow.addEventListener('change',placeControls);
+  placeControls();
   const densitySvg=document.getElementById('density-chart'), optimumSvg=document.getElementById('optimum-chart');
   const ns='http://www.w3.org/2000/svg';
   const format=(x,n=3)=>x.toLocaleString('es-UY',{minimumFractionDigits:n,maximumFractionDigits:n});
