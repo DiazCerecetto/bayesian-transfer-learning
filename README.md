@@ -71,9 +71,8 @@ Para cada fuente se prueban φ = 0, 0.1, …, 1. La posterior se aproxima con
 El DIC usa exclusivamente la verosimilitud del objetivo T.
 
 Al mover S, el explorador aplica el φ de menor DIC calculado en R. La barra de
-φ permite probar otros pesos. Las curvas, las medias y los intervalos creíbles
-centrales del 95 % se obtienen de la posterior Beta exacta condicionada a ese
-peso; no incorporan la incertidumbre de su selección.
+φ permite probar otros pesos. Las curvas se obtienen de la posterior Beta
+exacta condicionada a ese peso; no incorporan la incertidumbre de su selección.
 
 En esta configuración los primeros pesos nulos aparecen en S = 6 % por abajo
 y S = 54 % por arriba. Estos cortes dependen de la grilla, los tamaños y el
