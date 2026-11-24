@@ -2,7 +2,7 @@
 \usepackage{lmodern}
 \newcommand{\codefont}{\fontsize{8}{9.5}\selectfont\ttfamily}
 \usepackage[spanish,es-nodecimaldot]{babel}
-\usepackage{amsmath,amssymb,booktabs,array,geometry,graphicx,xcolor,listings,float,hyperref}
+\usepackage{amsmath,amssymb,booktabs,array,geometry,graphicx,xcolor,listings,float,etoolbox,hyperref}
 \geometry{margin=1.8cm}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{3.5pt}
@@ -52,6 +52,16 @@
   literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
            {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
            {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {ü}{{\"u}}1 {Ü}{{\"U}}1
+}
+
+% Líneas de analisis.R resaltadas en el Anexo A: posterior, muestra, DIC y phi elegido.
+% Son números de línea del archivo: si cambia el código, hay que actualizarlos.
+\definecolor{resaltado}{HTML}{FFEE99}
+\newcommand{\lineasresaltadas}{}
+\forcsvlist{\listadd\lineasresaltadas}{22,24,26,27,28,38}
+\newcommand{\resaltarlinea}[1]{%
+  \xifinlist{#1}{\lineasresaltadas}%
+    {\rlap{\smash{\color{resaltado}\rule[-2.85pt]{\linewidth}{9.5pt}}}}{}%
 }
 
 \begin{document}
@@ -230,7 +240,7 @@ El script \path{analisis.R} calcula el $\DIC$ para cada fuente y cada peso, y ge
 
 \subsection{Anexo A: código en R y salidas numéricas}\label{anexo:codigo}
 
-\lstinputlisting{analisis.R}
+\lstinputlisting[numbers=left,numbersep=0pt,numberstyle=\resaltarlinea]{analisis.R}
 
 \clearpage
 Salida de consola del experimento de fuente variable con aproximación por grilla ($99$ puntos en $[0.01,0.99]$, $10000$ muestras, semilla \texttt{84735}):
